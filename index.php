@@ -35,7 +35,7 @@ $di->set(
 
 // Create and bind the DI to the application
 $app = new Micro($di);
-// Retrieves all robots
+// Tüm bayileri getir
 $app->get(
     "/api/bayiler",
     function () use ($app) {
@@ -49,6 +49,13 @@ $app->get(
             $data[] = [
                 "bayi_id"   => $bayi->bayi_id,
                 "bayi_adi" => $bayi->bayi_adi,
+                "bayi_tel"   => $bayi->bayi_tel,
+                "bayi_email" => $bayi->bayi_email,
+                "bayi_adres"   => $bayi->bayi_adres,
+                "bayi_adreskodu" => $bayi->bayi_adreskodu,
+                "vergi_numarasi"   => $bayi->vergi_numarasi,
+                "aktif" => $bayi->aktif,
+                "kayit_tarihi"   => $bayi->kayit_tarihi
             ];
         }
 
@@ -56,41 +63,67 @@ $app->get(
     }
 );
 
-// Searches for robots with $name in their name
+// Bayi Adresinda Arama Yap
 $app->get(
-    "/api/robots/search/{name}",
-    function ($name) {
+    "/api/bayiler/search/{name}",
+    function ($name) use ($app) {
+
+        $phql = "SELECT * FROM Models\\Verilerim\\Bayiler WHERE bayi_kullaniciadi LIKE :name: OR bayi_adi LIKE :name:";
+
+        $bayiler = $app->modelsManager->executeQuery(
+            $phql,
+            [
+                "name" => "%" . $name . "%"
+            ]);
+
+        $data = [];
+
+        foreach ($bayiler as $bayi) {
+            $data[] = [
+                "bayi_id"   => $bayi->bayi_id,
+                "bayi_adi" => $bayi->bayi_adi,
+                "bayi_tel"   => $bayi->bayi_tel,
+                "bayi_email" => $bayi->bayi_email,
+                "bayi_adres"   => $bayi->bayi_adres,
+                "bayi_adreskodu" => $bayi->bayi_adreskodu,
+                "vergi_numarasi"   => $bayi->vergi_numarasi,
+                "aktif" => $bayi->aktif,
+                "kayit_tarihi"   => $bayi->kayit_tarihi
+            ];
+        }
+
+        echo json_encode($data);
 
     }
 );
 
-// Retrieves robots based on primary key
+// Primary Keye bağlı bayiyi getir
 $app->get(
-    "/api/robots/{id:[0-9]+}",
+    "/api/bayiler/{id:[0-9]+}",
     function ($id) {
 
     }
 );
 
-// Adds a new robot
+// Yeni bir bayi ekle
 $app->post(
-    "/api/robots",
+    "/api/bayiler",
     function () {
 
     }
 );
 
-// Updates robots based on primary key
+// Bayi id sine bağlı güncelle
 $app->put(
-    "/api/robots/{id:[0-9]+}",
+    "/api/bayiler/{id:[0-9]+}",
     function () {
 
     }
 );
 
-// Deletes robots based on primary key
+// Primary key e göre sil
 $app->delete(
-    "/api/robots/{id:[0-9]+}",
+    "/api/bayiler/{id:[0-9]+}",
     function () {
 
     }
