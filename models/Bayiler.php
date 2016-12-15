@@ -6,7 +6,6 @@ use Phalcon\Validation;
 use Phalcon\Validation\Validator\Uniqueness as UniquenessValidator;
 use Phalcon\Mvc\Model;
 use Phalcon\Mvc\Model\Message;
-use Phalcon\Mvc\Model\Validator\InclusionIn;
 
 
 class Bayiler extends Model
