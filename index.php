@@ -30,6 +30,7 @@ $di->set(
                 "username" => "root",
                 "password" => "",
                 "dbname"   => "banagetir",
+                "charset"   => "utf8mb4"
             ]
         );
     }
@@ -37,6 +38,8 @@ $di->set(
 
 // Create and bind the DI to the application
 $app = new Micro($di);
+
+//*******BAYİLER*********//
 // Tüm bayileri getir
 $app->get(
     "/api/bayiler",
@@ -215,6 +218,18 @@ $app->put(
 
         $db_bayi = Models\Verilerim\Bayiler::findFirst("bayi_id =" . $id);
 
+        $response = new Response();
+
+        if (!$db_bayi) {
+             $response->setJsonContent(
+                [
+                    "status" => "ERROR",
+                    "message" => "Belirlenen id de değer yok"
+                ]
+            );
+            return $response;
+        }
+       
         //id yi değiştirmesini engelle.
         if (isset($bayi->bayi_id)) {
             unset($bayi->bayi_id);
@@ -223,8 +238,6 @@ $app->put(
         foreach ($bayi as $key => $value) {
             $db_bayi->$key = $value;
         }
-
-         $response = new Response();
 
         if ($db_bayi->save() === false) {
 
@@ -291,5 +304,498 @@ $app->delete(
         return $response;
     }
 );
+
+//*******KATEGORİLER*********//
+// Tüm kategorileri getir
+$app->get(
+    "/api/kategoriler",
+    function () use ($app) {
+        $phql = "SELECT * FROM Models\\Verilerim\\Kategoriler";
+        $kategoriler = $app->modelsManager->executeQuery($phql);
+
+        $data = [];
+
+        foreach ($kategoriler as $kategori) {
+            $data[] = [
+                "kategori_id"   => $kategori->kategori_id,
+                "kategori_adi" => $kategori->kategori_adi,
+                "ust_kategori_id"   => $kategori->ust_kategori_id,
+            ];
+        }
+
+        echo json_encode($kategoriler);
+    }
+);
+
+// Kategorileri Adresinda Arama Yap
+$app->get(
+    "/api/kategoriler/search/{name}",
+    function ($name) use ($app) {
+
+        $phql = "SELECT * FROM Models\\Verilerim\\Kategoriler WHERE kategori_adi LIKE :name:";
+
+        $kategoriler = $app->modelsManager->executeQuery(
+            $phql,
+            [
+                "name" => "%" . $name . "%"
+            ]);
+
+        $data = [];
+
+        foreach ($kategoriler as $kategori) {
+            $data[] = [
+                "kategori_id"   => $kategori->kategori_id,
+                "kategori_adi" => $kategori->kategori_adi,
+                "ust_kategori_id"   => $kategori->ust_kategori_id,
+            ];
+        }
+
+        echo json_encode($data);
+
+    }
+);
+
+// Primary Keye bağlı kategorileri getir
+$app->get(
+    "/api/kategoriler/{id:[0-9]+}",
+    function ($id) use ($app) {
+        $phql = "SELECT * FROM Models\\Verilerim\\Kategoriler WHERE kategori_id = :id:";
+
+        $kategori = $app->modelsManager->executeQuery(
+            $phql,
+            [
+                "id" => $id,
+            ]
+        )->getFirst();
+
+
+
+        // Yanıt Oluştur
+        $response = new Response();
+
+        if ($kategori === false) {
+            $response->setJsonContent(
+                [
+                    "status" => "NOT-FOUND"
+                ]
+            );
+        } else {
+            $response->setJsonContent(
+                [
+                    "status" => "FOUND",
+                    "data"   => [
+                        "kategori_id"   => $kategori->kategori_id,
+                        "kategori_adi" => $kategori->kategori_adi,
+                        "ust_kategori_id" => $kategori->ust_kategori_id
+                    ]
+                ]
+            );
+        }
+
+        return $response;
+    }
+);
+
+// Yeni bir Kategorileri ekle
+$app->post(
+    "/api/kategoriler",
+    function () use ($app) {
+
+        $kategori = $app->request->getJsonRawBody();
+
+        $phql = "INSERT INTO Models\\Verilerim\\Kategoriler 
+        (kategori_adi, ust_kategori_id) VALUES 
+        (:kategori_adi:, :ust_kategori_id:)";
+
+
+        $status = $app->modelsManager->executeQuery(
+            $phql,
+            [
+                "kategori_adi" => $kategori->kategori_adi,
+                "ust_kategori_id"   => $kategori->ust_kategori_id
+            ]
+        );
+
+        // Yanıt Oluştur
+        $response = new Response();
+
+        // veri oluşturma başarılımı kontrol et
+        if ($status->success() === true) {
+            // Http durumunu değiştir
+            $response->setStatusCode(201, "Created");
+
+            $kategori->kategori_id = $status->getModel()->kategori_id;
+
+            $response->setJsonContent(
+                [
+                    "status" => "OK",
+                    "data"   => $kategori
+                ]
+            );
+        } else {
+            // Http durumunu değiştir
+            $response->setStatusCode(409, "Conflict");
+
+            // Hataları döndürmek için
+            $errors = [];
+
+            foreach ($status->getMessages() as $message) {
+                $errors[] = $message->getMessage();
+            }
+
+            $response->setJsonContent(
+                [
+                    "status"   => "ERROR",
+                    "messages" => $errors,
+                ]
+            );
+        }
+
+        return $response;
+
+    }
+);
+
+// Kategorileri id sine bağlı güncelle
+$app->put(
+    "/api/kategoriler/{id:[0-9]+}",
+    function ($id) use ($app) {
+        $kategori = $app->request->getJsonRawBody();
+
+        $db_kategori = Models\Verilerim\Kategoriler::findFirst("kategori_id =" . $id);
+
+        $response = new Response();
+
+        if (!$db_kategori) {
+             $response->setJsonContent(
+                [
+                    "status" => "ERROR",
+                    "message" => "Belirlenen id de değer yok"
+                ]
+            );
+            return $response;
+        }
+       
+        //id yi değiştirmesini engelle.
+        if (isset($kategori->kategori_id)) {
+            unset($kategori->kategori_id);
+        }
+
+        foreach ($kategori as $key => $value) {
+            $db_kategori->$key = $value;
+        }
+
+        if ($db_kategori->save() === false) {
+
+        $messages = $db_kategori->getMessages();
+        $response->setStatusCode(409, "Conflict");
+        $response->setJsonContent(
+                [
+                    "status" => "ERROR",
+                    "messages"   => $messages,
+                ]
+            );
+        } else {
+            $response->setJsonContent(
+                [
+                    "status" => "OK"
+                ]
+            );
+        }
+
+        return $response;
+    }
+);
+
+// Primary key e göre sil
+$app->delete(
+    "/api/kategoriler/{id:[0-9]+}",
+    function ($id) use ($app) {
+        $phql = "DELETE FROM Models\\Verilerim\\Kategoriler WHERE kategori_id = :id:";
+
+        $status = $app->modelsManager->executeQuery(
+            $phql,
+            [
+                "id" => $id,
+            ]
+        );
+
+        // Yanıt Oluştur
+        $response = new Response();
+
+        if ($status->success() === true) {
+            $response->setJsonContent(
+                [
+                    "status" => "OK"
+                ]
+            );
+        } else {
+            // Http durumunu değiştir
+            $response->setStatusCode(409, "Conflict");
+
+            $errors = [];
+
+            foreach ($status->getMessages() as $message) {
+                $errors[] = $message->getMessage();
+            }
+
+            $response->setJsonContent(
+                [
+                    "status"   => "ERROR",
+                    "messages" => $errors,
+                ]
+            );
+        }
+
+        return $response;
+    }
+);
+
+//*******LogKategori*********//
+// Tüm kategorileri getir
+$app->get(
+    "/api/kategoriler",
+    function () use ($app) {
+        $phql = "SELECT * FROM Models\\Verilerim\\Kategoriler";
+        $kategoriler = $app->modelsManager->executeQuery($phql);
+
+        $data = [];
+
+        foreach ($kategoriler as $kategori) {
+            $data[] = [
+                "kategori_id"   => $kategori->kategori_id,
+                "kategori_adi" => $kategori->kategori_adi,
+                "ust_kategori_id"   => $kategori->ust_kategori_id,
+            ];
+        }
+
+        echo json_encode($kategoriler);
+    }
+);
+
+// Kategorileri Adresinda Arama Yap
+$app->get(
+    "/api/kategoriler/search/{name}",
+    function ($name) use ($app) {
+
+        $phql = "SELECT * FROM Models\\Verilerim\\Kategoriler WHERE kategori_adi LIKE :name:";
+
+        $kategoriler = $app->modelsManager->executeQuery(
+            $phql,
+            [
+                "name" => "%" . $name . "%"
+            ]);
+
+        $data = [];
+
+        foreach ($kategoriler as $kategori) {
+            $data[] = [
+                "kategori_id"   => $kategori->kategori_id,
+                "kategori_adi" => $kategori->kategori_adi,
+                "ust_kategori_id"   => $kategori->ust_kategori_id,
+            ];
+        }
+
+        echo json_encode($data);
+
+    }
+);
+
+// Primary Keye bağlı kategorileri getir
+$app->get(
+    "/api/kategoriler/{id:[0-9]+}",
+    function ($id) use ($app) {
+        $phql = "SELECT * FROM Models\\Verilerim\\Kategoriler WHERE kategori_id = :id:";
+
+        $kategori = $app->modelsManager->executeQuery(
+            $phql,
+            [
+                "id" => $id,
+            ]
+        )->getFirst();
+
+
+
+        // Yanıt Oluştur
+        $response = new Response();
+
+        if ($kategori === false) {
+            $response->setJsonContent(
+                [
+                    "status" => "NOT-FOUND"
+                ]
+            );
+        } else {
+            $response->setJsonContent(
+                [
+                    "status" => "FOUND",
+                    "data"   => [
+                        "kategori_id"   => $kategori->kategori_id,
+                        "kategori_adi" => $kategori->kategori_adi,
+                        "ust_kategori_id" => $kategori->ust_kategori_id
+                    ]
+                ]
+            );
+        }
+
+        return $response;
+    }
+);
+
+// Yeni bir Kategorileri ekle
+$app->post(
+    "/api/kategoriler",
+    function () use ($app) {
+
+        $kategori = $app->request->getJsonRawBody();
+
+        $phql = "INSERT INTO Models\\Verilerim\\Kategoriler 
+        (kategori_adi, ust_kategori_id) VALUES 
+        (:kategori_adi:, :ust_kategori_id:)";
+
+
+        $status = $app->modelsManager->executeQuery(
+            $phql,
+            [
+                "kategori_adi" => $kategori->kategori_adi,
+                "ust_kategori_id"   => $kategori->ust_kategori_id
+            ]
+        );
+
+        // Yanıt Oluştur
+        $response = new Response();
+
+        // veri oluşturma başarılımı kontrol et
+        if ($status->success() === true) {
+            // Http durumunu değiştir
+            $response->setStatusCode(201, "Created");
+
+            $kategori->kategori_id = $status->getModel()->kategori_id;
+
+            $response->setJsonContent(
+                [
+                    "status" => "OK",
+                    "data"   => $kategori
+                ]
+            );
+        } else {
+            // Http durumunu değiştir
+            $response->setStatusCode(409, "Conflict");
+
+            // Hataları döndürmek için
+            $errors = [];
+
+            foreach ($status->getMessages() as $message) {
+                $errors[] = $message->getMessage();
+            }
+
+            $response->setJsonContent(
+                [
+                    "status"   => "ERROR",
+                    "messages" => $errors,
+                ]
+            );
+        }
+
+        return $response;
+
+    }
+);
+
+// Kategorileri id sine bağlı güncelle
+$app->put(
+    "/api/kategoriler/{id:[0-9]+}",
+    function ($id) use ($app) {
+        $kategori = $app->request->getJsonRawBody();
+
+        $db_kategori = Models\Verilerim\Kategoriler::findFirst("kategori_id =" . $id);
+
+        $response = new Response();
+
+        if (!$db_kategori) {
+             $response->setJsonContent(
+                [
+                    "status" => "ERROR",
+                    "message" => "Belirlenen id de değer yok"
+                ]
+            );
+            return $response;
+        }
+       
+        //id yi değiştirmesini engelle.
+        if (isset($kategori->kategori_id)) {
+            unset($kategori->kategori_id);
+        }
+
+        foreach ($kategori as $key => $value) {
+            $db_kategori->$key = $value;
+        }
+
+        if ($db_kategori->save() === false) {
+
+        $messages = $db_kategori->getMessages();
+        $response->setStatusCode(409, "Conflict");
+        $response->setJsonContent(
+                [
+                    "status" => "ERROR",
+                    "messages"   => $messages,
+                ]
+            );
+        } else {
+            $response->setJsonContent(
+                [
+                    "status" => "OK"
+                ]
+            );
+        }
+
+        return $response;
+    }
+);
+
+// Primary key e göre sil
+$app->delete(
+    "/api/kategoriler/{id:[0-9]+}",
+    function ($id) use ($app) {
+        $phql = "DELETE FROM Models\\Verilerim\\Kategoriler WHERE kategori_id = :id:";
+
+        $status = $app->modelsManager->executeQuery(
+            $phql,
+            [
+                "id" => $id,
+            ]
+        );
+
+        // Yanıt Oluştur
+        $response = new Response();
+
+        if ($status->success() === true) {
+            $response->setJsonContent(
+                [
+                    "status" => "OK"
+                ]
+            );
+        } else {
+            // Http durumunu değiştir
+            $response->setStatusCode(409, "Conflict");
+
+            $errors = [];
+
+            foreach ($status->getMessages() as $message) {
+                $errors[] = $message->getMessage();
+            }
+
+            $response->setJsonContent(
+                [
+                    "status"   => "ERROR",
+                    "messages" => $errors,
+                ]
+            );
+        }
+
+        return $response;
+    }
+);
+
 
 $app->handle();
