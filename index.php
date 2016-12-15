@@ -210,8 +210,42 @@ $app->post(
 // Bayi id sine bağlı güncelle
 $app->put(
     "/api/bayiler/{id:[0-9]+}",
-    function () {
+    function ($id) use ($app) {
+        $bayi = $app->request->getJsonRawBody();
 
+        $db_bayi = Models\Verilerim\Bayiler::findFirst("bayi_id =" . $id);
+
+        //id yi değiştirmesini engelle.
+        if (isset($bayi->bayi_id)) {
+            unset($bayi->bayi_id);
+        }
+
+        foreach ($bayi as $key => $value) {
+            $db_bayi->$key = $value;
+        }
+
+         $response = new Response();
+
+        if ($db_bayi->save() === false) {
+
+        $messages = $db_bayi->getMessages();
+        $response->setStatusCode(409, "Conflict");
+        $response->setJsonContent(
+                [
+                    "status" => "ERROR",
+                    "messages"   => $messages,
+                ]
+            );
+        } else {
+            $response->setJsonContent(
+                [
+                    "status" => "OK"
+                ]
+            );
+        }
+
+        
+        return $response;
     }
 );
 
