@@ -2,13 +2,14 @@
 
 namespace Models\Verilerim;
 
+use Phalcon\Validation;
+use Phalcon\Validation\Validator\Uniqueness as UniquenessValidator;
 use Phalcon\Mvc\Model;
 use Phalcon\Mvc\Model\Message;
-use Phalcon\Mvc\Model\Validator\Uniqueness;
 use Phalcon\Mvc\Model\Validator\InclusionIn;
 
 
-class Bayiler extends \Phalcon\Mvc\Model
+class Bayiler extends Model
 {
 
     /**
@@ -129,6 +130,29 @@ class Bayiler extends \Phalcon\Mvc\Model
     public static function findFirst($parameters = null)
     {
         return parent::findFirst($parameters);
+    }
+
+    public function validation()
+    {
+        $validator = new Validation();
+
+        $validator->add(
+            'bayi_kullaniciadi',
+            new UniquenessValidator([
+                'model' => $this,
+                'message' => 'Kullanıcı Adı zaten kullanımda',
+            ])
+        );
+
+        $validator->add(
+            'bayi_email',
+            new UniquenessValidator([
+                'model' => $this,
+                'message' => 'Email zaten kullanımda',
+            ])
+        );
+
+        return $this->validate($validator);
     }
 
 }
