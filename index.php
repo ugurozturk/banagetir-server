@@ -244,7 +244,6 @@ $app->put(
             );
         }
 
-        
         return $response;
     }
 );
@@ -252,8 +251,44 @@ $app->put(
 // Primary key e göre sil
 $app->delete(
     "/api/bayiler/{id:[0-9]+}",
-    function () {
+    function ($id) use ($app) {
+        $phql = "DELETE FROM Models\\Verilerim\\Bayiler WHERE bayi_id = :id:";
 
+        $status = $app->modelsManager->executeQuery(
+            $phql,
+            [
+                "id" => $id,
+            ]
+        );
+
+        // Create a response
+        $response = new Response();
+
+        if ($status->success() === true) {
+            $response->setJsonContent(
+                [
+                    "status" => "OK"
+                ]
+            );
+        } else {
+            // Change the HTTP status
+            $response->setStatusCode(409, "Conflict");
+
+            $errors = [];
+
+            foreach ($status->getMessages() as $message) {
+                $errors[] = $message->getMessage();
+            }
+
+            $response->setJsonContent(
+                [
+                    "status"   => "ERROR",
+                    "messages" => $errors,
+                ]
+            );
+        }
+
+        return $response;
     }
 );
 
