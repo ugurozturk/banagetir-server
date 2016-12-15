@@ -574,7 +574,7 @@ $app->get(
 
 // log_kategori Adresinda Arama Yap
 $app->get(
-    "/api/log_kategori/search/{name}",
+    "/api/logkategori/search/{name}",
     function ($name) use ($app) {
 
         $phql = "SELECT * FROM Models\\Verilerim\\LogKategori WHERE log_kategori_adi LIKE :name:";
@@ -601,7 +601,7 @@ $app->get(
 
 // Primary Keye bağlı log_kategori getir
 $app->get(
-    "/api/log_kategori/{id:[0-9]+}",
+    "/api/logkategori/{id:[0-9]+}",
     function ($id) use ($app) {
         $phql = "SELECT * FROM Models\\Verilerim\\LogKategori WHERE log_kategori_id = :id:";
 
@@ -641,7 +641,7 @@ $app->get(
 
 // Yeni bir log_kategori ekle
 $app->post(
-    "/api/log_kategori",
+    "/api/logkategori",
     function () use ($app) {
 
         $log_kategori = $app->request->getJsonRawBody();
@@ -700,7 +700,7 @@ $app->post(
 
 // log_kategori id sine bağlı güncelle
 $app->put(
-    "/api/log_kategori/{id:[0-9]+}",
+    "/api/logkategori/{id:[0-9]+}",
     function ($id) use ($app) {
         $log_kategori = $app->request->getJsonRawBody();
 
@@ -751,9 +751,249 @@ $app->put(
 
 // Primary key e göre sil
 $app->delete(
-    "/api/log_kategori/{id:[0-9]+}",
+    "/api/logkategori/{id:[0-9]+}",
     function ($id) use ($app) {
         $phql = "DELETE FROM Models\\Verilerim\\LogKategori WHERE log_kategori_id = :id:";
+
+        $status = $app->modelsManager->executeQuery(
+            $phql,
+            [
+                "id" => $id,
+            ]
+        );
+
+        // Yanıt Oluştur
+        $response = new Response();
+
+        if ($status->success() === true) {
+            $response->setJsonContent(
+                [
+                    "status" => "OK"
+                ]
+            );
+        } else {
+            // Http durumunu değiştir
+            $response->setStatusCode(409, "Conflict");
+
+            $errors = [];
+
+            foreach ($status->getMessages() as $message) {
+                $errors[] = $message->getMessage();
+            }
+
+            $response->setJsonContent(
+                [
+                    "status"   => "ERROR",
+                    "messages" => $errors,
+                ]
+            );
+        }
+
+        return $response;
+    }
+);
+
+//*******Marka*********//
+// Tüm kategorileri getir
+$app->get(
+    "/api/marka",
+    function () use ($app) {
+        $phql = "SELECT * FROM Models\\Verilerim\\Marka";
+        $markalar = $app->modelsManager->executeQuery($phql);
+
+        $data = [];
+
+        foreach ($markalar as $marka) {
+            $data[] = [
+                "marka_id"   => $marka->marka_id,
+                "marka_adi" => $marka->marka_adi,
+            ];
+        }
+
+        echo json_encode($data);
+    }
+);
+
+// marka Adresinda Arama Yap
+$app->get(
+    "/api/marka/search/{name}",
+    function ($name) use ($app) {
+
+        $phql = "SELECT * FROM Models\\Verilerim\\Marka WHERE marka_adi LIKE :name:";
+
+        $markalar = $app->modelsManager->executeQuery(
+            $phql,
+            [
+                "name" => "%" . $name . "%"
+            ]);
+
+        $data = [];
+
+        foreach ($markalar as $marka) {
+            $data[] = [
+                "marka_id"   => $marka->marka_id,
+                "marka_adi" => $marka->marka_adi,
+            ];
+        }
+
+        echo json_encode($data);
+
+    }
+);
+
+// Primary Keye bağlı marka getir
+$app->get(
+    "/api/marka/{id:[0-9]+}",
+    function ($id) use ($app) {
+        $phql = "SELECT * FROM Models\\Verilerim\\Marka WHERE marka_id = :id:";
+
+        $marka = $app->modelsManager->executeQuery(
+            $phql,
+            [
+                "id" => $id,
+            ]
+        )->getFirst();
+
+        // Yanıt Oluştur
+        $response = new Response();
+
+        if ($marka === false) {
+            $response->setJsonContent(
+                [
+                    "status" => "NOT-FOUND"
+                ]
+            );
+        } else {
+            $response->setJsonContent(
+                [
+                    "status" => "FOUND",
+                    "data"   => [
+                        "marka_id"   => $marka->marka_id,
+                        "marka_adi" => $marka->marka_adi,
+                    ]
+                ]
+            );
+        }
+
+        return $response;
+    }
+);
+
+// Yeni bir marka ekle
+$app->post(
+    "/api/marka",
+    function () use ($app) {
+
+        $marka = $app->request->getJsonRawBody();
+
+        $phql = "INSERT INTO Models\\Verilerim\\Marka 
+        (marka_adi) VALUES 
+        (:marka_adi:)";
+
+
+        $status = $app->modelsManager->executeQuery(
+            $phql,
+            [
+                "marka_adi" => $marka->marka_adi,
+            ]
+        );
+
+        // Yanıt Oluştur
+        $response = new Response();
+
+        // veri oluşturma başarılımı kontrol et
+        if ($status->success() === true) {
+            // Http durumunu değiştir
+            $response->setStatusCode(201, "Created");
+
+            $marka->marka_id = $status->getModel()->marka_id;
+
+            $response->setJsonContent(
+                [
+                    "status" => "OK",
+                    "data"   => $marka
+                ]
+            );
+        } else {
+            // Http durumunu değiştir
+            $response->setStatusCode(409, "Conflict");
+
+            // Hataları döndürmek için
+            $errors = [];
+
+            foreach ($status->getMessages() as $message) {
+                $errors[] = $message->getMessage();
+            }
+
+            $response->setJsonContent(
+                [
+                    "status"   => "ERROR",
+                    "messages" => $errors,
+                ]
+            );
+        }
+
+        return $response;
+
+    }
+);
+
+// marka id sine bağlı güncelle
+$app->put(
+    "/api/marka/{id:[0-9]+}",
+    function ($id) use ($app) {
+        $marka = $app->request->getJsonRawBody();
+
+        $db_marka = Models\Verilerim\Marka::findFirst("marka_id =" . $id);
+
+        $response = new Response();
+
+        if (!$db_marka) {
+             $response->setJsonContent(
+                [
+                    "status" => "ERROR",
+                    "message" => "Belirlenen id de değer yok"
+                ]
+            );
+            return $response;
+        }
+       
+        //id yi değiştirmesini engelle.
+        if (isset($marka->marka_id)) {
+            unset($marka->marka_id);
+        }
+
+        foreach ($marka as $key => $value) {
+            $db_marka->$key = $value;
+        }
+
+        if ($db_marka->save() === false) {
+
+        $messages = $db_marka->getMessages();
+        $response->setStatusCode(409, "Conflict");
+        $response->setJsonContent(
+                [
+                    "status" => "ERROR",
+                    "messages"   => $messages,
+                ]
+            );
+        } else {
+            $response->setJsonContent(
+                [
+                    "status" => "OK"
+                ]
+            );
+        }
+
+        return $response;
+    }
+);
+
+// Primary key e göre sil
+$app->delete(
+    "/api/marka/{id:[0-9]+}",
+    function ($id) use ($app) {
+        $phql = "DELETE FROM Models\\Verilerim\\Marka WHERE marka_id = :id:";
 
         $status = $app->modelsManager->executeQuery(
             $phql,
