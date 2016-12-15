@@ -323,7 +323,7 @@ $app->get(
             ];
         }
 
-        echo json_encode($kategoriler);
+        echo json_encode($data);
     }
 );
 
@@ -554,33 +554,32 @@ $app->delete(
 //*******LogKategori*********//
 // Tüm kategorileri getir
 $app->get(
-    "/api/kategoriler",
+    "/api/logkategori",
     function () use ($app) {
-        $phql = "SELECT * FROM Models\\Verilerim\\Kategoriler";
-        $kategoriler = $app->modelsManager->executeQuery($phql);
+        $phql = "SELECT * FROM Models\\Verilerim\\LogKategori";
+        $log_kategorileri = $app->modelsManager->executeQuery($phql);
 
         $data = [];
 
-        foreach ($kategoriler as $kategori) {
+        foreach ($log_kategorileri as $log_kategori) {
             $data[] = [
-                "kategori_id"   => $kategori->kategori_id,
-                "kategori_adi" => $kategori->kategori_adi,
-                "ust_kategori_id"   => $kategori->ust_kategori_id,
+                "log_kategori_id"   => $log_kategori->log_kategori_id,
+                "log_kategori_adi" => $log_kategori->log_kategori_adi,
             ];
         }
 
-        echo json_encode($kategoriler);
+        echo json_encode($data);
     }
 );
 
-// Kategorileri Adresinda Arama Yap
+// log_kategori Adresinda Arama Yap
 $app->get(
-    "/api/kategoriler/search/{name}",
+    "/api/log_kategori/search/{name}",
     function ($name) use ($app) {
 
-        $phql = "SELECT * FROM Models\\Verilerim\\Kategoriler WHERE kategori_adi LIKE :name:";
+        $phql = "SELECT * FROM Models\\Verilerim\\LogKategori WHERE log_kategori_adi LIKE :name:";
 
-        $kategoriler = $app->modelsManager->executeQuery(
+        $log_kategorileri = $app->modelsManager->executeQuery(
             $phql,
             [
                 "name" => "%" . $name . "%"
@@ -588,11 +587,10 @@ $app->get(
 
         $data = [];
 
-        foreach ($kategoriler as $kategori) {
+        foreach ($log_kategorileri as $log_kategori) {
             $data[] = [
-                "kategori_id"   => $kategori->kategori_id,
-                "kategori_adi" => $kategori->kategori_adi,
-                "ust_kategori_id"   => $kategori->ust_kategori_id,
+                "log_kategori_id"   => $log_kategori->log_kategori_id,
+                "log_kategori_adi" => $log_kategori->log_kategori_adi,
             ];
         }
 
@@ -601,13 +599,13 @@ $app->get(
     }
 );
 
-// Primary Keye bağlı kategorileri getir
+// Primary Keye bağlı log_kategori getir
 $app->get(
-    "/api/kategoriler/{id:[0-9]+}",
+    "/api/log_kategori/{id:[0-9]+}",
     function ($id) use ($app) {
-        $phql = "SELECT * FROM Models\\Verilerim\\Kategoriler WHERE kategori_id = :id:";
+        $phql = "SELECT * FROM Models\\Verilerim\\LogKategori WHERE log_kategori_id = :id:";
 
-        $kategori = $app->modelsManager->executeQuery(
+        $log_kategori = $app->modelsManager->executeQuery(
             $phql,
             [
                 "id" => $id,
@@ -619,7 +617,7 @@ $app->get(
         // Yanıt Oluştur
         $response = new Response();
 
-        if ($kategori === false) {
+        if ($log_kategori === false) {
             $response->setJsonContent(
                 [
                     "status" => "NOT-FOUND"
@@ -630,9 +628,8 @@ $app->get(
                 [
                     "status" => "FOUND",
                     "data"   => [
-                        "kategori_id"   => $kategori->kategori_id,
-                        "kategori_adi" => $kategori->kategori_adi,
-                        "ust_kategori_id" => $kategori->ust_kategori_id
+                        "log_kategori_id"   => $log_kategori->log_kategori_id,
+                        "log_kategori_adi" => $log_kategori->log_kategori_adi,
                     ]
                 ]
             );
@@ -642,23 +639,22 @@ $app->get(
     }
 );
 
-// Yeni bir Kategorileri ekle
+// Yeni bir log_kategori ekle
 $app->post(
-    "/api/kategoriler",
+    "/api/log_kategori",
     function () use ($app) {
 
-        $kategori = $app->request->getJsonRawBody();
+        $log_kategori = $app->request->getJsonRawBody();
 
-        $phql = "INSERT INTO Models\\Verilerim\\Kategoriler 
-        (kategori_adi, ust_kategori_id) VALUES 
-        (:kategori_adi:, :ust_kategori_id:)";
+        $phql = "INSERT INTO Models\\Verilerim\\LogKategori 
+        (log_kategori_adi) VALUES 
+        (:log_kategori_adi:)";
 
 
         $status = $app->modelsManager->executeQuery(
             $phql,
             [
-                "kategori_adi" => $kategori->kategori_adi,
-                "ust_kategori_id"   => $kategori->ust_kategori_id
+                "log_kategori_adi" => $log_kategori->log_kategori_adi,
             ]
         );
 
@@ -670,12 +666,12 @@ $app->post(
             // Http durumunu değiştir
             $response->setStatusCode(201, "Created");
 
-            $kategori->kategori_id = $status->getModel()->kategori_id;
+            $log_kategori->log_kategori_id = $status->getModel()->log_kategori_id;
 
             $response->setJsonContent(
                 [
                     "status" => "OK",
-                    "data"   => $kategori
+                    "data"   => $log_kategori
                 ]
             );
         } else {
@@ -702,13 +698,13 @@ $app->post(
     }
 );
 
-// Kategorileri id sine bağlı güncelle
+// log_kategori id sine bağlı güncelle
 $app->put(
-    "/api/kategoriler/{id:[0-9]+}",
+    "/api/log_kategori/{id:[0-9]+}",
     function ($id) use ($app) {
-        $kategori = $app->request->getJsonRawBody();
+        $log_kategori = $app->request->getJsonRawBody();
 
-        $db_kategori = Models\Verilerim\Kategoriler::findFirst("kategori_id =" . $id);
+        $db_kategori = Models\Verilerim\LogKategori::findFirst("log_kategori_id =" . $id);
 
         $response = new Response();
 
@@ -723,11 +719,11 @@ $app->put(
         }
        
         //id yi değiştirmesini engelle.
-        if (isset($kategori->kategori_id)) {
-            unset($kategori->kategori_id);
+        if (isset($log_kategori->log_kategori_id)) {
+            unset($log_kategori->log_kategori_id);
         }
 
-        foreach ($kategori as $key => $value) {
+        foreach ($log_kategori as $key => $value) {
             $db_kategori->$key = $value;
         }
 
@@ -755,9 +751,9 @@ $app->put(
 
 // Primary key e göre sil
 $app->delete(
-    "/api/kategoriler/{id:[0-9]+}",
+    "/api/log_kategori/{id:[0-9]+}",
     function ($id) use ($app) {
-        $phql = "DELETE FROM Models\\Verilerim\\Kategoriler WHERE kategori_id = :id:";
+        $phql = "DELETE FROM Models\\Verilerim\\LogKategori WHERE log_kategori_id = :id:";
 
         $status = $app->modelsManager->executeQuery(
             $phql,
@@ -796,6 +792,7 @@ $app->delete(
         return $response;
     }
 );
+
 
 
 $app->handle();
