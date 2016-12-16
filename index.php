@@ -1345,7 +1345,6 @@ $app->get(
     }
 );
 
-
 // Primary Keye bağlı ürünü getir
 $app->get(
     "/api/usergroups/{id:[0-9]+}",
@@ -1537,6 +1536,287 @@ $app->delete(
     }
 );
 
+//*******Users*********//
+// Tüm users ları getir
+$app->get(
+    "/api/users",
+    function () use ($app) {
+        $phql = "SELECT * FROM Models\\Verilerim\\Users";
+        $users = $app->modelsManager->executeQuery($phql);
+
+        $data = [];
+
+        foreach ($users as $user) {
+            $data[] = [
+                "user_id"   => $user->user_id,
+                "user_group_id" => $user->user_group_id,
+                "user_kullaniciadi"   => $user->user_kullaniciadi,
+                "user_sifre" => $user->user_sifre,
+                "user_adi"   => $user->user_adi,
+                "user_soyadi" => $user->user_soyadi,
+                "user_tel"   => $user->user_tel,
+                "user_email" => $user->user_email,
+                "user_dogumtarihi"   => $user->user_dogumtarihi,
+                "user_adres" => $user->user_adres,
+                "user_adreskodu"   => $user->user_adreskodu,
+                "aktif" => $user->aktif,
+                "kayit_tarihi"   => $user->kayit_tarihi,
+            ];
+        }
+
+        echo json_encode($data);
+    }
+);
+
+// users Adresinda Arama Yap
+$app->get(
+    "/api/users/search/{name}",
+    function ($name) use ($app) {
+
+        $phql = "SELECT * FROM Models\\Verilerim\\Users WHERE user_kullaniciadi LIKE :name: OR user_adi LIKE :name: OR user_soyadi LIKE :name:";
+
+        $users = $app->modelsManager->executeQuery(
+            $phql,
+            [
+                "name" => "%" . $name . "%"
+            ]);
+
+        $data = [];
+
+        foreach ($users as $user) {
+            $data[] = [
+                "user_id"   => $user->user_id,
+                "user_group_id" => $user->user_group_id,
+                "user_kullaniciadi"   => $user->user_kullaniciadi,
+                "user_sifre" => $user->user_sifre,
+                "user_adi"   => $user->user_adi,
+                "user_soyadi" => $user->user_soyadi,
+                "user_tel"   => $user->user_tel,
+                "user_email" => $user->user_email,
+                "user_dogumtarihi"   => $user->user_dogumtarihi,
+                "user_adres" => $user->user_adres,
+                "user_adreskodu"   => $user->user_adreskodu,
+                "aktif" => $user->aktif,
+                "kayit_tarihi"   => $user->kayit_tarihi,
+            ];
+        }
+
+        echo json_encode($data);
+
+    }
+);
+
+// Primary Keye bağlı ürünü getir
+$app->get(
+    "/api/users/{id:[0-9]+}",
+    function ($id) use ($app) {
+        $phql = "SELECT * FROM Models\\Verilerim\\Users WHERE user_id = :id:";
+
+        $user = $app->modelsManager->executeQuery(
+            $phql,
+            [
+                "id" => $id,
+            ]
+        )->getFirst();
+
+        // Yanıt Oluştur
+        $response = new Response();
+
+        if ($user === false) {
+            $response->setJsonContent(
+                [
+                    "status" => "NOT-FOUND"
+                ]
+            );
+        } else {
+            $response->setJsonContent(
+                [
+                    "status" => "FOUND",
+                    "data"   => [
+                                "user_id"   => $user->user_id,
+                                "user_group_id" => $user->user_group_id,
+                                "user_kullaniciadi"   => $user->user_kullaniciadi,
+                                "user_sifre" => $user->user_sifre,
+                                "user_adi"   => $user->user_adi,
+                                "user_soyadi" => $user->user_soyadi,
+                                "user_tel"   => $user->user_tel,
+                                "user_email" => $user->user_email,
+                                "user_dogumtarihi"   => $user->user_dogumtarihi,
+                                "user_adres" => $user->user_adres,
+                                "user_adreskodu"   => $user->user_adreskodu,
+                                "aktif" => $user->aktif,
+                                "kayit_tarihi"   => $user->kayit_tarihi,
+                    ]
+                ]
+            );
+        }
+
+        return $response;
+    }
+);
+
+// Yeni bir user ekle
+$app->post(
+    "/api/users",
+    function () use ($app) {
+
+        $user = $app->request->getJsonRawBody();
+
+        $phql = "INSERT INTO Models\\Verilerim\\Users 
+        (user_group_id,user_kullaniciadi,user_sifre,user_adi,user_soyadi,user_tel,user_email,user_dogumtarihi,user_adres,user_adreskodu,aktif) VALUES 
+        (:user_group_id:,:user_kullaniciadi:,:user_sifre:,:user_adi:,:user_soyadi:,:user_tel:,:user_email:,:user_dogumtarihi:,:user_adres:,:user_adreskodu:,:aktif:)";
+
+        $status = $app->modelsManager->executeQuery(
+            $phql,
+            [
+                "user_group_id" => $user->user_group_id,
+                "user_kullaniciadi"   => $user->user_kullaniciadi,
+                "user_sifre" => $user->user_sifre,
+                "user_adi"   => $user->user_adi,
+                "user_soyadi" => $user->user_soyadi,
+                "user_tel"   => $user->user_tel,
+                "user_email" => $user->user_email,
+                "user_dogumtarihi"   => $user->user_dogumtarihi,
+                "user_adres" => $user->user_adres,
+                "user_adreskodu"   => $user->user_adreskodu,
+                "aktif" => $user->aktif,
+            ]
+        );
+
+        // Yanıt Oluştur
+        $response = new Response();
+
+        // veri oluşturma başarılımı kontrol et
+        if ($status->success() === true) {
+            // Http durumunu değiştir
+            $response->setStatusCode(201, "Created");
+
+            $user->user_id = $status->getModel()->user_id;
+
+            $response->setJsonContent(
+                [
+                    "status" => "OK",
+                    "data"   => $user
+                ]
+            );
+        } else {
+            // Http durumunu değiştir
+            $response->setStatusCode(409, "Conflict");
+
+            // Hataları döndürmek için
+            $errors = [];
+
+            foreach ($status->getMessages() as $message) {
+                $errors[] = $message->getMessage();
+            }
+
+            $response->setJsonContent(
+                [
+                    "status"   => "ERROR",
+                    "messages" => $errors,
+                ]
+            );
+        }
+
+        return $response;
+
+    }
+);
+
+// user id sine bağlı güncelle
+$app->put(
+    "/api/users/{id:[0-9]+}",
+    function ($id) use ($app) {
+        $user = $app->request->getJsonRawBody();
+
+        $db_user= Models\Verilerim\Users::findFirst("user_id =" . $id);
+
+        $response = new Response();
+
+        if (!$db_user) {
+             $response->setJsonContent(
+                [
+                    "status" => "ERROR",
+                    "message" => "Belirlenen id de değer yok"
+                ]
+            );
+            return $response;
+        }
+       
+        //id yi değiştirmesini engelle.
+        if (isset($user->user_id)) {
+            unset($user->user_id);
+        }
+
+        foreach ($user as $key => $value) {
+            $db_user->$key = $value;
+        }
+
+        if ($db_user->save() === false) {
+
+        $messages = $db_user->getMessages();
+        $response->setStatusCode(409, "Conflict");
+        $response->setJsonContent(
+                [
+                    "status" => "ERROR",
+                    "messages"   => $messages,
+                ]
+            );
+        } else {
+            $response->setJsonContent(
+                [
+                    "status" => "OK"
+                ]
+            );
+        }
+
+        return $response;
+    }
+);
+
+// Primary key e göre sil
+$app->delete(
+    "/api/users/{id:[0-9]+}",
+    function ($id) use ($app) {
+        $phql = "DELETE FROM Models\\Verilerim\\Users WHERE user_id = :id:";
+
+        $status = $app->modelsManager->executeQuery(
+            $phql,
+            [
+                "id" => $id,
+            ]
+        );
+
+        // Yanıt Oluştur
+        $response = new Response();
+
+        if ($status->success() === true) {
+            $response->setJsonContent(
+                [
+                    "status" => "OK"
+                ]
+            );
+        } else {
+            // Http durumunu değiştir
+            $response->setStatusCode(409, "Conflict");
+
+            $errors = [];
+
+            foreach ($status->getMessages() as $message) {
+                $errors[] = $message->getMessage();
+            }
+
+            $response->setJsonContent(
+                [
+                    "status"   => "ERROR",
+                    "messages" => $errors,
+                ]
+            );
+        }
+
+        return $response;
+    }
+);
 
 
 $app->handle();
