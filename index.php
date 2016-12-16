@@ -1033,6 +1033,534 @@ $app->delete(
     }
 );
 
+//*******Ürünler*********//
+// Tüm ürünleri getir
+$app->get(
+    "/api/urunler",
+    function () use ($app) {
+        $phql = "SELECT * FROM Models\\Verilerim\\Urunler";
+        $urunler = $app->modelsManager->executeQuery($phql);
+
+        $data = [];
+
+        foreach ($urunler as $urun) {
+            $data[] = [
+                "urun_id"   => $urun->urun_id,
+                "bayi_id" => $urun->bayi_id,
+                "kategori_id"   => $urun->kategori_id,
+                "marka_id" => $urun->marka_id,
+                "urun_adi"   => $urun->urun_adi,
+                "birim_fiyat" => $urun->birim_fiyat,
+                "kayit_tarihi"   => $urun->kayit_tarihi,
+                "aktif" => $urun->aktif,
+            ];
+        }
+
+        echo json_encode($data);
+    }
+);
+
+// urunler Adresinda Arama Yap
+$app->get(
+    "/api/urunler/search/{name}",
+    function ($name) use ($app) {
+
+        $phql = "SELECT * FROM Models\\Verilerim\\Urunler WHERE urun_adi LIKE :name:";
+
+        $urunler = $app->modelsManager->executeQuery(
+            $phql,
+            [
+                "name" => "%" . $name . "%"
+            ]);
+
+        $data = [];
+
+        foreach ($urunler as $urun) {
+            $data[] = [
+                "urun_id"   => $urun->urun_id,
+                "bayi_id" => $urun->bayi_id,
+                "kategori_id"   => $urun->kategori_id,
+                "marka_id" => $urun->marka_id,
+                "urun_adi"   => $urun->urun_adi,
+                "birim_fiyat" => $urun->birim_fiyat,
+                "kayit_tarihi"   => $urun->kayit_tarihi,
+                "aktif" => $urun->aktif,
+            ];
+        }
+
+        echo json_encode($data);
+
+    }
+);
+
+//TODO test et
+// Primary Keye bağlı ürünü getir
+$app->get(
+    "/api/urunler/{id:[0-9]+}",
+    function ($id) use ($app) {
+        $phql = "SELECT * FROM Models\\Verilerim\\Urunler WHERE urun_id = :id:";
+
+        $urun = $app->modelsManager->executeQuery(
+            $phql,
+            [
+                "id" => $id,
+            ]
+        )->getFirst();
+
+        // Yanıt Oluştur
+        $response = new Response();
+
+        if ($urun === false) {
+            $response->setJsonContent(
+                [
+                    "status" => "NOT-FOUND"
+                ]
+            );
+        } else {
+            $response->setJsonContent(
+                [
+                    "status" => "FOUND",
+                    "data"   => [
+                                "urun_id"   => $urun->urun_id,
+                                "bayi_id" => $urun->bayi_id,
+                                "kategori_id"   => $urun->kategori_id,
+                                "marka_id" => $urun->marka_id,
+                                "urun_adi"   => $urun->urun_adi,
+                                "birim_fiyat" => $urun->birim_fiyat,
+                                "kayit_tarihi"   => $urun->kayit_tarihi,
+                                "aktif" => $urun->aktif,
+                    ]
+                ]
+            );
+        }
+
+        return $response;
+    }
+);
+
+// Yeni bir ürün ekle
+$app->post(
+    "/api/urunler",
+    function () use ($app) {
+
+        $urun = $app->request->getJsonRawBody();
+
+        $phql = "INSERT INTO Models\\Verilerim\\Urunler 
+        (bayi_id, kategori_id, marka_id, urun_adi, birim_fiyat, aktif) VALUES 
+        (:bayi_id:,:kategori_id:,:marka_id:,:urun_adi:,:birim_fiyat:,:aktif:)";
+
+//TODO marka_id null düşülebilsin.
+        $status = $app->modelsManager->executeQuery(
+            $phql,
+            [
+                "bayi_id" => $urun->bayi_id,
+                "kategori_id"   => $urun->kategori_id,
+                "marka_id" => $urun->marka_id,
+                "urun_adi"   => $urun->urun_adi,
+                "birim_fiyat" => $urun->birim_fiyat,
+                "aktif" => $urun->aktif,
+            ]
+        );
+
+        // Yanıt Oluştur
+        $response = new Response();
+
+        // veri oluşturma başarılımı kontrol et
+        if ($status->success() === true) {
+            // Http durumunu değiştir
+            $response->setStatusCode(201, "Created");
+
+            $urun->urun_id = $status->getModel()->urun_id;
+
+            $response->setJsonContent(
+                [
+                    "status" => "OK",
+                    "data"   => $urun
+                ]
+            );
+        } else {
+            // Http durumunu değiştir
+            $response->setStatusCode(409, "Conflict");
+
+            // Hataları döndürmek için
+            $errors = [];
+
+            foreach ($status->getMessages() as $message) {
+                $errors[] = $message->getMessage();
+            }
+
+            $response->setJsonContent(
+                [
+                    "status"   => "ERROR",
+                    "messages" => $errors,
+                ]
+            );
+        }
+
+        return $response;
+
+    }
+);
+
+// ürün id sine bağlı güncelle
+$app->put(
+    "/api/urunler/{id:[0-9]+}",
+    function ($id) use ($app) {
+        $urun = $app->request->getJsonRawBody();
+
+        $db_urun = Models\Verilerim\Urunler::findFirst("urun_id =" . $id);
+
+        $response = new Response();
+
+        if (!$db_urun) {
+             $response->setJsonContent(
+                [
+                    "status" => "ERROR",
+                    "message" => "Belirlenen id de değer yok"
+                ]
+            );
+            return $response;
+        }
+       
+        //id yi değiştirmesini engelle.
+        if (isset($urun->urun_id)) {
+            unset($urun->urun_id);
+        }
+
+        foreach ($urun as $key => $value) {
+            $db_urun->$key = $value;
+        }
+
+        if ($db_urun->save() === false) {
+
+        $messages = $db_urun->getMessages();
+        $response->setStatusCode(409, "Conflict");
+        $response->setJsonContent(
+                [
+                    "status" => "ERROR",
+                    "messages"   => $messages,
+                ]
+            );
+        } else {
+            $response->setJsonContent(
+                [
+                    "status" => "OK"
+                ]
+            );
+        }
+
+        return $response;
+    }
+);
+
+// Primary key e göre sil
+$app->delete(
+    "/api/urunler/{id:[0-9]+}",
+    function ($id) use ($app) {
+        $phql = "DELETE FROM Models\\Verilerim\\Urunler WHERE urun_id = :id:";
+
+        $status = $app->modelsManager->executeQuery(
+            $phql,
+            [
+                "id" => $id,
+            ]
+        );
+
+        // Yanıt Oluştur
+        $response = new Response();
+
+        if ($status->success() === true) {
+            $response->setJsonContent(
+                [
+                    "status" => "OK"
+                ]
+            );
+        } else {
+            // Http durumunu değiştir
+            $response->setStatusCode(409, "Conflict");
+
+            $errors = [];
+
+            foreach ($status->getMessages() as $message) {
+                $errors[] = $message->getMessage();
+            }
+
+            $response->setJsonContent(
+                [
+                    "status"   => "ERROR",
+                    "messages" => $errors,
+                ]
+            );
+        }
+
+        return $response;
+    }
+);
+
+//*******User Groups*********//
+// Tüm usergroups ları getir
+$app->get(
+    "/api/usergroups",
+    function () use ($app) {
+        $phql = "SELECT * FROM Models\\Verilerim\\UserGroups";
+        $urunler = $app->modelsManager->executeQuery($phql);
+
+        $data = [];
+
+        foreach ($urunler as $urun) {
+            $data[] = [
+                "urun_id"   => $urun->urun_id,
+                "bayi_id" => $urun->bayi_id,
+                "kategori_id"   => $urun->kategori_id,
+                "marka_id" => $urun->marka_id,
+                "urun_adi"   => $urun->urun_adi,
+                "birim_fiyat" => $urun->birim_fiyat,
+                "kayit_tarihi"   => $urun->kayit_tarihi,
+                "aktif" => $urun->aktif,
+            ];
+        }
+
+        echo json_encode($data);
+    }
+);
+
+// usergroups Adresinda Arama Yap
+$app->get(
+    "/api/usergroups/search/{name}",
+    function ($name) use ($app) {
+
+        $phql = "SELECT * FROM Models\\Verilerim\\Urunler WHERE urun_adi LIKE :name:";
+
+        $urunler = $app->modelsManager->executeQuery(
+            $phql,
+            [
+                "name" => "%" . $name . "%"
+            ]);
+
+        $data = [];
+
+        foreach ($urunler as $urun) {
+            $data[] = [
+                "urun_id"   => $urun->urun_id,
+                "bayi_id" => $urun->bayi_id,
+                "kategori_id"   => $urun->kategori_id,
+                "marka_id" => $urun->marka_id,
+                "urun_adi"   => $urun->urun_adi,
+                "birim_fiyat" => $urun->birim_fiyat,
+                "kayit_tarihi"   => $urun->kayit_tarihi,
+                "aktif" => $urun->aktif,
+            ];
+        }
+
+        echo json_encode($data);
+
+    }
+);
+
+
+// Primary Keye bağlı ürünü getir
+$app->get(
+    "/api/usergroups/{id:[0-9]+}",
+    function ($id) use ($app) {
+        $phql = "SELECT * FROM Models\\Verilerim\\Urunler WHERE urun_id = :id:";
+
+        $urun = $app->modelsManager->executeQuery(
+            $phql,
+            [
+                "id" => $id,
+            ]
+        )->getFirst();
+
+        // Yanıt Oluştur
+        $response = new Response();
+
+        if ($urun === false) {
+            $response->setJsonContent(
+                [
+                    "status" => "NOT-FOUND"
+                ]
+            );
+        } else {
+            $response->setJsonContent(
+                [
+                    "status" => "FOUND",
+                    "data"   => [
+                                "urun_id"   => $urun->urun_id,
+                                "bayi_id" => $urun->bayi_id,
+                                "kategori_id"   => $urun->kategori_id,
+                                "marka_id" => $urun->marka_id,
+                                "urun_adi"   => $urun->urun_adi,
+                                "birim_fiyat" => $urun->birim_fiyat,
+                                "kayit_tarihi"   => $urun->kayit_tarihi,
+                                "aktif" => $urun->aktif,
+                    ]
+                ]
+            );
+        }
+
+        return $response;
+    }
+);
+
+// Yeni bir ürün ekle
+$app->post(
+    "/api/urunler",
+    function () use ($app) {
+
+        $urun = $app->request->getJsonRawBody();
+
+        $phql = "INSERT INTO Models\\Verilerim\\Urunler 
+        (bayi_id, kategori_id, marka_id, urun_adi, birim_fiyat, aktif) VALUES 
+        (:bayi_id:,:kategori_id:,:marka_id:,:urun_adi:,:birim_fiyat:,:aktif:)";
+
+//TODO marka_id null düşülebilsin.
+        $status = $app->modelsManager->executeQuery(
+            $phql,
+            [
+                "bayi_id" => $urun->bayi_id,
+                "kategori_id"   => $urun->kategori_id,
+                "marka_id" => $urun->marka_id,
+                "urun_adi"   => $urun->urun_adi,
+                "birim_fiyat" => $urun->birim_fiyat,
+                "aktif" => $urun->aktif,
+            ]
+        );
+
+        // Yanıt Oluştur
+        $response = new Response();
+
+        // veri oluşturma başarılımı kontrol et
+        if ($status->success() === true) {
+            // Http durumunu değiştir
+            $response->setStatusCode(201, "Created");
+
+            $urun->urun_id = $status->getModel()->urun_id;
+
+            $response->setJsonContent(
+                [
+                    "status" => "OK",
+                    "data"   => $urun
+                ]
+            );
+        } else {
+            // Http durumunu değiştir
+            $response->setStatusCode(409, "Conflict");
+
+            // Hataları döndürmek için
+            $errors = [];
+
+            foreach ($status->getMessages() as $message) {
+                $errors[] = $message->getMessage();
+            }
+
+            $response->setJsonContent(
+                [
+                    "status"   => "ERROR",
+                    "messages" => $errors,
+                ]
+            );
+        }
+
+        return $response;
+
+    }
+);
+
+// ürün id sine bağlı güncelle
+$app->put(
+    "/api/urunler/{id:[0-9]+}",
+    function ($id) use ($app) {
+        $urun = $app->request->getJsonRawBody();
+
+        $db_urun = Models\Verilerim\Urunler::findFirst("urun_id =" . $id);
+
+        $response = new Response();
+
+        if (!$db_urun) {
+             $response->setJsonContent(
+                [
+                    "status" => "ERROR",
+                    "message" => "Belirlenen id de değer yok"
+                ]
+            );
+            return $response;
+        }
+       
+        //id yi değiştirmesini engelle.
+        if (isset($urun->urun_id)) {
+            unset($urun->urun_id);
+        }
+
+        foreach ($urun as $key => $value) {
+            $db_urun->$key = $value;
+        }
+
+        if ($db_urun->save() === false) {
+
+        $messages = $db_urun->getMessages();
+        $response->setStatusCode(409, "Conflict");
+        $response->setJsonContent(
+                [
+                    "status" => "ERROR",
+                    "messages"   => $messages,
+                ]
+            );
+        } else {
+            $response->setJsonContent(
+                [
+                    "status" => "OK"
+                ]
+            );
+        }
+
+        return $response;
+    }
+);
+
+// Primary key e göre sil
+$app->delete(
+    "/api/urunler/{id:[0-9]+}",
+    function ($id) use ($app) {
+        $phql = "DELETE FROM Models\\Verilerim\\Urunler WHERE urun_id = :id:";
+
+        $status = $app->modelsManager->executeQuery(
+            $phql,
+            [
+                "id" => $id,
+            ]
+        );
+
+        // Yanıt Oluştur
+        $response = new Response();
+
+        if ($status->success() === true) {
+            $response->setJsonContent(
+                [
+                    "status" => "OK"
+                ]
+            );
+        } else {
+            // Http durumunu değiştir
+            $response->setStatusCode(409, "Conflict");
+
+            $errors = [];
+
+            foreach ($status->getMessages() as $message) {
+                $errors[] = $message->getMessage();
+            }
+
+            $response->setJsonContent(
+                [
+                    "status"   => "ERROR",
+                    "messages" => $errors,
+                ]
+            );
+        }
+
+        return $response;
+    }
+);
+
 
 
 $app->handle();

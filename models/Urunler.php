@@ -1,5 +1,12 @@
 <?php
 
+namespace Models\Verilerim;
+
+use Phalcon\Validation;
+use Phalcon\Validation\Validator\Uniqueness as UniquenessValidator;
+use Phalcon\Mvc\Model;
+use Phalcon\Mvc\Model\Message;
+
 class Urunler extends \Phalcon\Mvc\Model
 {
 
