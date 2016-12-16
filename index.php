@@ -1303,20 +1303,14 @@ $app->get(
     "/api/usergroups",
     function () use ($app) {
         $phql = "SELECT * FROM Models\\Verilerim\\UserGroups";
-        $urunler = $app->modelsManager->executeQuery($phql);
+        $usergroups = $app->modelsManager->executeQuery($phql);
 
         $data = [];
 
-        foreach ($urunler as $urun) {
+        foreach ($usergroups as $usergroup) {
             $data[] = [
-                "urun_id"   => $urun->urun_id,
-                "bayi_id" => $urun->bayi_id,
-                "kategori_id"   => $urun->kategori_id,
-                "marka_id" => $urun->marka_id,
-                "urun_adi"   => $urun->urun_adi,
-                "birim_fiyat" => $urun->birim_fiyat,
-                "kayit_tarihi"   => $urun->kayit_tarihi,
-                "aktif" => $urun->aktif,
+                "user_group_id"   => $usergroup->user_group_id,
+                "user_group_name" => $usergroup->user_group_name,
             ];
         }
 
@@ -1329,9 +1323,9 @@ $app->get(
     "/api/usergroups/search/{name}",
     function ($name) use ($app) {
 
-        $phql = "SELECT * FROM Models\\Verilerim\\Urunler WHERE urun_adi LIKE :name:";
+        $phql = "SELECT * FROM Models\\Verilerim\\UserGroups WHERE user_group_name LIKE :name:";
 
-        $urunler = $app->modelsManager->executeQuery(
+        $usergroups = $app->modelsManager->executeQuery(
             $phql,
             [
                 "name" => "%" . $name . "%"
@@ -1339,16 +1333,10 @@ $app->get(
 
         $data = [];
 
-        foreach ($urunler as $urun) {
+        foreach ($usergroups as $usergroup) {
             $data[] = [
-                "urun_id"   => $urun->urun_id,
-                "bayi_id" => $urun->bayi_id,
-                "kategori_id"   => $urun->kategori_id,
-                "marka_id" => $urun->marka_id,
-                "urun_adi"   => $urun->urun_adi,
-                "birim_fiyat" => $urun->birim_fiyat,
-                "kayit_tarihi"   => $urun->kayit_tarihi,
-                "aktif" => $urun->aktif,
+                "user_group_id"   => $usergroup->user_group_id,
+                "user_group_name" => $usergroup->user_group_name,
             ];
         }
 
@@ -1362,9 +1350,9 @@ $app->get(
 $app->get(
     "/api/usergroups/{id:[0-9]+}",
     function ($id) use ($app) {
-        $phql = "SELECT * FROM Models\\Verilerim\\Urunler WHERE urun_id = :id:";
+        $phql = "SELECT * FROM Models\\Verilerim\\UserGroups WHERE user_group_id = :id:";
 
-        $urun = $app->modelsManager->executeQuery(
+        $usergroup = $app->modelsManager->executeQuery(
             $phql,
             [
                 "id" => $id,
@@ -1374,7 +1362,7 @@ $app->get(
         // Yanıt Oluştur
         $response = new Response();
 
-        if ($urun === false) {
+        if ($usergroups === false) {
             $response->setJsonContent(
                 [
                     "status" => "NOT-FOUND"
@@ -1385,14 +1373,8 @@ $app->get(
                 [
                     "status" => "FOUND",
                     "data"   => [
-                                "urun_id"   => $urun->urun_id,
-                                "bayi_id" => $urun->bayi_id,
-                                "kategori_id"   => $urun->kategori_id,
-                                "marka_id" => $urun->marka_id,
-                                "urun_adi"   => $urun->urun_adi,
-                                "birim_fiyat" => $urun->birim_fiyat,
-                                "kayit_tarihi"   => $urun->kayit_tarihi,
-                                "aktif" => $urun->aktif,
+                                "user_group_id"   => $usergroup->user_group_id,
+                                "user_group_name" => $usergroup->user_group_name,
                     ]
                 ]
             );
@@ -1404,25 +1386,19 @@ $app->get(
 
 // Yeni bir ürün ekle
 $app->post(
-    "/api/urunler",
+    "/api/usergroups",
     function () use ($app) {
 
-        $urun = $app->request->getJsonRawBody();
+        $usergroup = $app->request->getJsonRawBody();
 
-        $phql = "INSERT INTO Models\\Verilerim\\Urunler 
-        (bayi_id, kategori_id, marka_id, urun_adi, birim_fiyat, aktif) VALUES 
-        (:bayi_id:,:kategori_id:,:marka_id:,:urun_adi:,:birim_fiyat:,:aktif:)";
+        $phql = "INSERT INTO Models\\Verilerim\\UserGroups 
+        (user_group_name) VALUES 
+        (:user_group_name:)";
 
-//TODO marka_id null düşülebilsin.
         $status = $app->modelsManager->executeQuery(
             $phql,
             [
-                "bayi_id" => $urun->bayi_id,
-                "kategori_id"   => $urun->kategori_id,
-                "marka_id" => $urun->marka_id,
-                "urun_adi"   => $urun->urun_adi,
-                "birim_fiyat" => $urun->birim_fiyat,
-                "aktif" => $urun->aktif,
+                "user_group_name" => $usergroup->user_group_name,
             ]
         );
 
@@ -1434,12 +1410,12 @@ $app->post(
             // Http durumunu değiştir
             $response->setStatusCode(201, "Created");
 
-            $urun->urun_id = $status->getModel()->urun_id;
+            $usergroup->user_group_id = $status->getModel()->user_group_id;
 
             $response->setJsonContent(
                 [
                     "status" => "OK",
-                    "data"   => $urun
+                    "data"   => $usergroup
                 ]
             );
         } else {
@@ -1466,17 +1442,17 @@ $app->post(
     }
 );
 
-// ürün id sine bağlı güncelle
+// usergroups id sine bağlı güncelle
 $app->put(
-    "/api/urunler/{id:[0-9]+}",
+    "/api/usergroups/{id:[0-9]+}",
     function ($id) use ($app) {
-        $urun = $app->request->getJsonRawBody();
+        $usergroup = $app->request->getJsonRawBody();
 
-        $db_urun = Models\Verilerim\Urunler::findFirst("urun_id =" . $id);
+        $db_usergroup = Models\Verilerim\UserGroups::findFirst("user_group_id =" . $id);
 
         $response = new Response();
 
-        if (!$db_urun) {
+        if (!$db_usergroup) {
              $response->setJsonContent(
                 [
                     "status" => "ERROR",
@@ -1487,17 +1463,17 @@ $app->put(
         }
        
         //id yi değiştirmesini engelle.
-        if (isset($urun->urun_id)) {
-            unset($urun->urun_id);
+        if (isset($usergroup->user_group_id)) {
+            unset($usergroup->user_group_id);
         }
 
-        foreach ($urun as $key => $value) {
-            $db_urun->$key = $value;
+        foreach ($usergroup as $key => $value) {
+            $db_usergroup->$key = $value;
         }
 
-        if ($db_urun->save() === false) {
+        if ($db_usergroup->save() === false) {
 
-        $messages = $db_urun->getMessages();
+        $messages = $db_usergroup->getMessages();
         $response->setStatusCode(409, "Conflict");
         $response->setJsonContent(
                 [
@@ -1519,9 +1495,9 @@ $app->put(
 
 // Primary key e göre sil
 $app->delete(
-    "/api/urunler/{id:[0-9]+}",
+    "/api/usergroups/{id:[0-9]+}",
     function ($id) use ($app) {
-        $phql = "DELETE FROM Models\\Verilerim\\Urunler WHERE urun_id = :id:";
+        $phql = "DELETE FROM Models\\Verilerim\\UserGroups WHERE user_group_id = :id:";
 
         $status = $app->modelsManager->executeQuery(
             $phql,
