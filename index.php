@@ -1818,5 +1818,497 @@ $app->delete(
     }
 );
 
+//*******Logs*********//
+// Tüm logları getir
+$app->get(
+    "/api/logs",
+    function () use ($app) {
+        $phql = "SELECT * FROM Models\\Verilerim\\Logs";
+        $logs = $app->modelsManager->executeQuery($phql);
+
+        $data = [];
+
+        foreach ($logs as $log) {
+            $data[] = [
+                "log_id"   => $log->log_id,
+                "log_kategori_id" => $log->log_kategori_id,
+                "log_detail" => $log->log_detail
+            ];
+        }
+
+        echo json_encode($data);
+    }
+);
+
+// logların Adresinda Arama Yap
+$app->get(
+    "/api/logs/search/{name}",
+    function ($name) use ($app) {
+
+        $phql = "SELECT * FROM Models\\Verilerim\\Logs WHERE log_detail LIKE :name:";
+
+        $log_kategorileri = $app->modelsManager->executeQuery(
+            $phql,
+            [
+                "name" => "%" . $name . "%"
+            ]);
+
+        $data = [];
+
+        foreach ($log_kategorileri as $log_kategori) {
+            $data[] = [
+                "log_id"   => $log->log_id,
+                "log_kategori_id" => $log->log_kategori_id,
+                "log_detail" => $log->log_detail
+            ];
+        }
+
+        echo json_encode($data);
+
+    }
+);
+
+// Primary Keye bağlı log getir
+$app->get(
+    "/api/logs/{id:[0-9]+}",
+    function ($id) use ($app) {
+        $phql = "SELECT * FROM Models\\Verilerim\\Logs WHERE log_id = :id:";
+
+        $log = $app->modelsManager->executeQuery(
+            $phql,
+            [
+                "id" => $id,
+            ]
+        )->getFirst();
+
+
+        $response = new Response();
+
+        if ($log === false) {
+            $response->setJsonContent(
+                [
+                    "status" => "NOT-FOUND"
+                ]
+            );
+        } else {
+            $response->setJsonContent(
+                [
+                    "status" => "FOUND",
+                    "data"   => [
+                        "log_id"   => $log->log_id,
+                        "log_kategori_id" => $log->log_kategori_id,
+                        "log_detail" => $log->log_detail
+                    ]
+                ]
+            );
+        }
+
+        return $response;
+    }
+);
+
+// Yeni bir log ekle
+$app->post(
+    "/api/logs",
+    function () use ($app) {
+
+        $log = $app->request->getJsonRawBody();
+
+        $phql = "INSERT INTO Models\\Verilerim\\Logs 
+        (log_kategori_id,log_detail) VALUES 
+        (:log_kategori_id:,:log_detail:)";
+
+
+        $status = $app->modelsManager->executeQuery(
+            $phql,
+            [
+                "log_kategori_id" => $log->log_kategori_id,
+                "log_detail" => $log->log_detail
+            ]
+        );
+
+        // Yanıt Oluştur
+        $response = new Response();
+
+        // veri oluşturma başarılımı kontrol et
+        if ($status->success() === true) {
+            // Http durumunu değiştir
+            $response->setStatusCode(201, "Created");
+
+            $log->log_id = $status->getModel()->log_id;
+
+            $response->setJsonContent(
+                [
+                    "status" => "OK",
+                    "data"   => $log
+                ]
+            );
+        } else {
+            // Http durumunu değiştir
+            $response->setStatusCode(409, "Conflict");
+
+            // Hataları döndürmek için
+            $errors = [];
+
+            foreach ($status->getMessages() as $message) {
+                $errors[] = $message->getMessage();
+            }
+
+            $response->setJsonContent(
+                [
+                    "status"   => "ERROR",
+                    "messages" => $errors,
+                ]
+            );
+        }
+
+        return $response;
+
+    }
+);
+
+// logs id sine bağlı güncelle
+$app->put(
+    "/api/logs/{id:[0-9]+}",
+    function ($id) use ($app) {
+        $log = $app->request->getJsonRawBody();
+
+        $db_log = Models\Verilerim\Logs::findFirst("log_id =" . $id);
+
+        $response = new Response();
+
+        if (!$db_kategori) {
+             $response->setJsonContent(
+                [
+                    "status" => "ERROR",
+                    "message" => "Belirlenen id de değer yok"
+                ]
+            );
+            return $response;
+        }
+       
+        //id yi değiştirmesini engelle.
+        if (isset($log->log_id)) {
+            unset($log->log_id);
+        }
+
+        foreach ($log as $key => $value) {
+            $db_log->$key = $value;
+        }
+
+        if ($db_log->save() === false) {
+
+        $messages = $db_log->getMessages();
+        $response->setStatusCode(409, "Conflict");
+        $response->setJsonContent(
+                [
+                    "status" => "ERROR",
+                    "messages"   => $messages,
+                ]
+            );
+        } else {
+            $response->setJsonContent(
+                [
+                    "status" => "OK"
+                ]
+            );
+        }
+
+        return $response;
+    }
+);
+
+// Primary key e göre sil
+$app->delete(
+    "/api/logs/{id:[0-9]+}",
+    function ($id) use ($app) {
+        $phql = "DELETE FROM Models\\Verilerim\\Logs WHERE log_id = :id:";
+
+        $status = $app->modelsManager->executeQuery(
+            $phql,
+            [
+                "id" => $id,
+            ]
+        );
+
+        // Yanıt Oluştur
+        $response = new Response();
+
+        if ($status->success() === true) {
+            $response->setJsonContent(
+                [
+                    "status" => "OK"
+                ]
+            );
+        } else {
+            // Http durumunu değiştir
+            $response->setStatusCode(409, "Conflict");
+
+            $errors = [];
+
+            foreach ($status->getMessages() as $message) {
+                $errors[] = $message->getMessage();
+            }
+
+            $response->setJsonContent(
+                [
+                    "status"   => "ERROR",
+                    "messages" => $errors,
+                ]
+            );
+        }
+
+        return $response;
+    }
+);
+
+//*******UserFavlist*********//
+// Tüm userfavlisti getir
+$app->get(
+    "/api/userfavlist",
+    function () use ($app) {
+        $phql = "SELECT * FROM Models\\Verilerim\\UserFavlist";
+        $userfavlists = $app->modelsManager->executeQuery($phql);
+
+        $data = [];
+
+        foreach ($userfavlists as $userfavlist) {
+            $data[] = [
+                "user_favlist_id"   => $userfavlist->user_favlist_id,
+                "user_id" => $userfavlist->user_id,
+                "urun_id" => $userfavlist->urun_id,
+                "kayit_tarihi" => $userfavlist->kayit_tarihi
+            ];
+        }
+
+        echo json_encode($data);
+    }
+);
+
+// Ürün adını arama yap
+// userfavlistte Arama Yap
+$app->get(
+    "/api/userfavlist/search/{name}",
+    function ($name) use ($app) {
+
+        $phql = "SELECT * FROM Models\\Verilerim\\UserFavlist WHERE log_detail LIKE :name:";
+
+        $userfavlists = $app->modelsManager->executeQuery(
+            $phql,
+            [
+                "name" => "%" . $name . "%"
+            ]);
+
+        $data = [];
+
+        foreach ($userfavlists as $userfavlist) {
+            $data[] = [
+                "user_favlist_id"   => $userfavlist->user_favlist_id,
+                "user_id" => $userfavlist->user_id,
+                "urun_id" => $userfavlist->urun_id,
+                "kayit_tarihi" => $userfavlist->kayit_tarihi
+            ];
+        }
+
+        echo json_encode($data);
+
+    }
+);
+
+// Primary Keye bağlı userfavlisti getir
+$app->get(
+    "/api/userfavlist/{id:[0-9]+}",
+    function ($id) use ($app) {
+        $phql = "SELECT * FROM Models\\Verilerim\\UserFavlist WHERE user_favlist_id = :id:";
+
+        $userfavlist = $app->modelsManager->executeQuery(
+            $phql,
+            [
+                "id" => $id,
+            ]
+        )->getFirst();
+
+
+        $response = new Response();
+
+        if ($userfavlist === false) {
+            $response->setJsonContent(
+                [
+                    "status" => "NOT-FOUND"
+                ]
+            );
+        } else {
+            $response->setJsonContent(
+                [
+                    "status" => "FOUND",
+                    "data"   => [
+                        "user_favlist_id"   => $userfavlist->user_favlist_id,
+                        "user_id" => $userfavlist->user_id,
+                        "urun_id" => $userfavlist->urun_id,
+                        "kayit_tarihi" => $userfavlist->kayit_tarihi
+                    ]
+                ]
+            );
+        }
+
+        return $response;
+    }
+);
+
+// Yeni bir userfavlist ekle
+$app->post(
+    "/api/userfavlist",
+    function () use ($app) {
+
+        $userfavlist = $app->request->getJsonRawBody();
+
+        $phql = "INSERT INTO Models\\Verilerim\\UserFavlist 
+        (user_id,urun_id) VALUES 
+        (:user_id:,:urun_id:)";
+
+
+        $status = $app->modelsManager->executeQuery(
+            $phql,
+            [
+                "user_id" => $userfavlist->user_id,
+                "urun_id" => $userfavlist->urun_id,
+            ]
+        );
+
+        // Yanıt Oluştur
+        $response = new Response();
+
+        // veri oluşturma başarılımı kontrol et
+        if ($status->success() === true) {
+            // Http durumunu değiştir
+            $response->setStatusCode(201, "Created");
+
+            $userfavlist->user_favlist_id = $status->getModel()->user_favlist_id;
+
+            $response->setJsonContent(
+                [
+                    "status" => "OK",
+                    "data"   => $userfavlist
+                ]
+            );
+        } else {
+            // Http durumunu değiştir
+            $response->setStatusCode(409, "Conflict");
+
+            // Hataları döndürmek için
+            $errors = [];
+
+            foreach ($status->getMessages() as $message) {
+                $errors[] = $message->getMessage();
+            }
+
+            $response->setJsonContent(
+                [
+                    "status"   => "ERROR",
+                    "messages" => $errors,
+                ]
+            );
+        }
+
+        return $response;
+
+    }
+);
+
+// userfavlist id sine bağlı güncelle
+$app->put(
+    "/api/userfavlist/{id:[0-9]+}",
+    function ($id) use ($app) {
+        $userfavlist = $app->request->getJsonRawBody();
+
+        $db_userfavlist = Models\Verilerim\UserFavlist::findFirst("user_favlist_id =" . $id);
+
+        $response = new Response();
+
+        if (!$db_userfavlist) {
+             $response->setJsonContent(
+                [
+                    "status" => "ERROR",
+                    "message" => "Belirlenen id de değer yok"
+                ]
+            );
+            return $response;
+        }
+       
+        //id yi değiştirmesini engelle.
+        if (isset($userfavlist->user_favlist_id)) {
+            unset($userfavlist->user_favlist_id);
+        }
+//TODO isset ile kontrol et
+        foreach ($userfavlist as $key => $value) {
+            $db_userfavlist->$key = $value;
+        }
+
+        if ($db_userfavlist->save() === false) {
+
+        $messages = $db_userfavlist->getMessages();
+        $response->setStatusCode(409, "Conflict");
+        $response->setJsonContent(
+                [
+                    "status" => "ERROR",
+                    "messages"   => $messages,
+                ]
+            );
+        } else {
+            $response->setJsonContent(
+                [
+                    "status" => "OK"
+                ]
+            );
+        }
+
+        return $response;
+    }
+);
+
+// Primary key e göre sil
+$app->delete(
+    "/api/userfavlist/{id:[0-9]+}",
+    function ($id) use ($app) {
+        $phql = "DELETE FROM Models\\Verilerim\\UserFavlist WHERE user_favlist_id = :id:";
+
+        $status = $app->modelsManager->executeQuery(
+            $phql,
+            [
+                "id" => $id,
+            ]
+        );
+
+        // Yanıt Oluştur
+        $response = new Response();
+
+        if ($status->success() === true) {
+            $response->setJsonContent(
+                [
+                    "status" => "OK"
+                ]
+            );
+        } else {
+            // Http durumunu değiştir
+            $response->setStatusCode(409, "Conflict");
+
+            $errors = [];
+
+            foreach ($status->getMessages() as $message) {
+                $errors[] = $message->getMessage();
+            }
+
+            $response->setJsonContent(
+                [
+                    "status"   => "ERROR",
+                    "messages" => $errors,
+                ]
+            );
+        }
+
+        return $response;
+    }
+);
+
 
 $app->handle();

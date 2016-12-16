@@ -1,5 +1,12 @@
 <?php
 
+namespace Models\Verilerim;
+
+use Phalcon\Validation;
+use Phalcon\Validation\Validator\Uniqueness as UniquenessValidator;
+use Phalcon\Mvc\Model;
+use Phalcon\Mvc\Model\Message;
+
 class Logs extends \Phalcon\Mvc\Model
 {
 
@@ -18,6 +25,13 @@ class Logs extends \Phalcon\Mvc\Model
      * @Column(type="integer", length=11, nullable=false)
      */
     public $log_kategori_id;
+
+     /**
+     *
+     * @var string
+     * @Column(type="string", length=500, nullable=false)
+     */
+    public $log_detail;
 
     /**
      * Initialize method for model.
