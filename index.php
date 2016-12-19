@@ -2310,5 +2310,262 @@ $app->delete(
     }
 );
 
+//*******Ürün Yorumları*********//
+// Tüm urunyorumlarini getir
+$app->get(
+    "/api/urunyorumlar",
+    function () use ($app) {
+        $phql = "SELECT * FROM Models\\Verilerim\\UrunYorumlar";
+        $urunyorumlari = $app->modelsManager->executeQuery($phql);
+
+        $data = [];
+
+        foreach ($urunyorumlari as $urunyorum) {
+            $data[] = [
+                "urun_yorumlari_id"   => $urunyorum->urun_yorumlari_id,
+                "user_id" => $urunyorum->user_id,
+                "urun_id" => $urunyorum->urun_id,
+                "puan_hiz" => $urunyorum->puan_hiz,
+                "puan_paketleme" => $urunyorum->puan_paketleme,
+                "puan_lezzet" => $urunyorum->puan_lezzet,
+                "kayit_tarihi" => $urunyorum->kayit_tarihi
+            ];
+        }
+
+        echo json_encode($data);
+    }
+);
+
+/*// Ürün yorumu arama yap
+// urunyorumlarinda Arama Yap
+$app->get(
+    "/api/urunyorumlar/search/{name}",
+    function ($name) use ($app) {
+
+        $phql = "SELECT * FROM Models\\Verilerim\\UrunYorumlar WHERE log_detail LIKE :name:";
+
+        $urunyorumlari = $app->modelsManager->executeQuery(
+            $phql,
+            [
+                "name" => "%" . $name . "%"
+            ]);
+
+        $data = [];
+
+        foreach ($urunyorumlari as $urunyorum) {
+            $data[] = [
+                "user_favlist_id"   => $urunyorum->user_favlist_id,
+                "user_id" => $urunyorum->user_id,
+                "urun_id" => $urunyorum->urun_id,
+                "kayit_tarihi" => $urunyorum->kayit_tarihi
+            ];
+        }
+
+        echo json_encode($data);
+
+    }
+);*/
+
+// Primary Keye bağlı urunyorumi getir
+$app->get(
+    "/api/urunyorumlar/{id:[0-9]+}",
+    function ($id) use ($app) {
+        $phql = "SELECT * FROM Models\\Verilerim\\UrunYorumlar WHERE urun_yorumlari_id = :id:";
+
+        $urunyorum = $app->modelsManager->executeQuery(
+            $phql,
+            [
+                "id" => $id,
+            ]
+        )->getFirst();
+
+
+        $response = new Response();
+
+        if ($urunyorum === false) {
+            $response->setJsonContent(
+                [
+                    "status" => "NOT-FOUND"
+                ]
+            );
+        } else {
+            $response->setJsonContent(
+                [
+                    "status" => "FOUND",
+                    "data"   => [
+                        "urun_yorumlari_id"   => $urunyorum->urun_yorumlari_id,
+                        "user_id" => $urunyorum->user_id,
+                        "urun_id" => $urunyorum->urun_id,
+                        "puan_hiz" => $urunyorum->puan_hiz,
+                        "puan_paketleme" => $urunyorum->puan_paketleme,
+                        "puan_lezzet" => $urunyorum->puan_lezzet,
+                        "kayit_tarihi" => $urunyorum->kayit_tarihi
+                    ]
+                ]
+            );
+        }
+
+        return $response;
+    }
+);
+
+// Yeni bir urunyorumlari ekle
+$app->post(
+    "/api/urunyorumlar",
+    function () use ($app) {
+
+        $urunyorum = $app->request->getJsonRawBody();
+
+        $phql = "INSERT INTO Models\\Verilerim\\UrunYorumlar 
+        (user_id,urun_id,puan_hiz,puan_paketleme,puan_lezzet) VALUES 
+        (:user_id:,:urun_id:,:puan_hiz:,:puan_paketleme:,:puan_lezzet:)";
+
+
+        $status = $app->modelsManager->executeQuery(
+            $phql,
+            [
+                "user_id" => $urunyorum->user_id,
+                "urun_id" => $urunyorum->urun_id,
+                "puan_hiz" => $urunyorum->puan_hiz,
+                "puan_paketleme" => $urunyorum->puan_paketleme,
+                "puan_lezzet" => $urunyorum->puan_lezzet
+            ]
+        );
+
+        // Yanıt Oluştur
+        $response = new Response();
+
+        // veri oluşturma başarılımı kontrol et
+        if ($status->success() === true) {
+            // Http durumunu değiştir
+            $response->setStatusCode(201, "Created");
+
+            $urunyorum->urun_yorumlari_id = $status->getModel()->urun_yorumlari_id;
+
+            $response->setJsonContent(
+                [
+                    "status" => "OK",
+                    "data"   => $urunyorum
+                ]
+            );
+        } else {
+            // Http durumunu değiştir
+            $response->setStatusCode(409, "Conflict");
+
+            // Hataları döndürmek için
+            $errors = [];
+
+            foreach ($status->getMessages() as $message) {
+                $errors[] = $message->getMessage();
+            }
+
+            $response->setJsonContent(
+                [
+                    "status"   => "ERROR",
+                    "messages" => $errors,
+                ]
+            );
+        }
+
+        return $response;
+
+    }
+);
+
+// urunyorum id sine bağlı güncelle
+$app->put(
+    "/api/urunyorumlar/{id:[0-9]+}",
+    function ($id) use ($app) {
+        $urunyorum = $app->request->getJsonRawBody();
+
+        $db_urunyorum = Models\Verilerim\UrunYorumlar::findFirst("urun_yorumlari_id =" . $id);
+
+        $response = new Response();
+
+        if (!$db_urunyorum) {
+             $response->setJsonContent(
+                [
+                    "status" => "ERROR",
+                    "message" => "Belirlenen id de değer yok"
+                ]
+            );
+            return $response;
+        }
+       
+        //id yi değiştirmesini engelle.
+        if (isset($urunyorum->urun_yorumlari_id)) {
+            unset($urunyorum->urun_yorumlari_id);
+        }
+
+        foreach ($urunyorum as $key => $value) {
+            $db_urunyorum->$key = $value;
+        }
+
+        if ($db_urunyorum->save() === false) {
+
+        $messages = $db_urunyorum->getMessages();
+        $response->setStatusCode(409, "Conflict");
+        $response->setJsonContent(
+                [
+                    "status" => "ERROR",
+                    "messages"   => $messages,
+                ]
+            );
+        } else {
+            $response->setJsonContent(
+                [
+                    "status" => "OK"
+                ]
+            );
+        }
+
+        return $response;
+    }
+);
+
+// Primary key e göre sil
+$app->delete(
+    "/api/urunyorumlar/{id:[0-9]+}",
+    function ($id) use ($app) {
+        $phql = "DELETE FROM Models\\Verilerim\\UrunYorumlar WHERE urun_yorumlari_id = :id:";
+
+        $status = $app->modelsManager->executeQuery(
+            $phql,
+            [
+                "id" => $id
+            ]
+        );
+
+        // Yanıt Oluştur
+        $response = new Response();
+
+        if ($status->success() === true) {
+            $response->setJsonContent(
+                [
+                    "status" => "OK"
+                ]
+            );
+        } else {
+            // Http durumunu değiştir
+            $response->setStatusCode(409, "Conflict");
+
+            $errors = [];
+
+            foreach ($status->getMessages() as $message) {
+                $errors[] = $message->getMessage();
+            }
+
+            $response->setJsonContent(
+                [
+                    "status"   => "ERROR",
+                    "messages" => $errors,
+                ]
+            );
+        }
+
+        return $response;
+    }
+);
+
 
 $app->handle();
