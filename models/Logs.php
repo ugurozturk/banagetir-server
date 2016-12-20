@@ -32,6 +32,13 @@ class Logs extends \Phalcon\Mvc\Model
      * @Column(type="string", length=500, nullable=false)
      */
     public $log_detail;
+    
+    /**
+     *
+     * @var date
+     * @Column(type="TIMESTAMP", nullable=false)
+     */
+    public $kayit_tarihi;
 
     /**
      * Initialize method for model.

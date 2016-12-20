@@ -68,6 +68,8 @@ $app->get(
     }
 );
 
+
+//TODO bayiyi email + bayi adı na göre arama yapsın. Alttakini düzelt veya yeni router ekle
 // Bayi Adresinda Arama Yap
 $app->get(
     "/api/bayiler/search/{name}",
@@ -131,8 +133,15 @@ $app->get(
                 [
                     "status" => "FOUND",
                     "data"   => [
-                        "id"   => $bayi->bayi_id,
-                        "name" => $bayi->bayi_adi
+                        "bayi_id"   => $bayi->bayi_id,
+                        "bayi_adi" => $bayi->bayi_adi,
+                        "bayi_tel"   => $bayi->bayi_tel,
+                        "bayi_email" => $bayi->bayi_email,
+                        "bayi_adres"   => $bayi->bayi_adres,
+                        "bayi_adreskodu" => $bayi->bayi_adreskodu,
+                        "vergi_numarasi"   => $bayi->vergi_numarasi,
+                        "aktif" => $bayi->aktif,
+                        "kayit_tarihi"   => $bayi->kayit_tarihi
                     ]
                 ]
             );
@@ -150,8 +159,8 @@ $app->post(
         $bayi = $app->request->getJsonRawBody();
 
         $phql = "INSERT INTO Models\\Verilerim\\Bayiler 
-        (bayi_kullaniciadi, bayi_sifre, bayi_adi, bayi_tel, bayi_email, bayi_adres, bayi_adreskodu, vergi_numarasi, aktif, kayit_tarihi) VALUES 
-        (:bayi_kullaniciadi:, :bayi_sifre:, :bayi_adi:, :bayi_tel:, :bayi_email:, :bayi_adres:, :bayi_adreskodu:, :vergi_numarasi:, :aktif:, :kayit_tarihi:)";
+        (bayi_kullaniciadi, bayi_sifre, bayi_adi, bayi_tel, bayi_email, bayi_adres, bayi_adreskodu, vergi_numarasi, aktif) VALUES 
+        (:bayi_kullaniciadi:, :bayi_sifre:, :bayi_adi:, :bayi_tel:, :bayi_email:, :bayi_adres:, :bayi_adreskodu:, :vergi_numarasi:, :aktif:)";
 
 
         $status = $app->modelsManager->executeQuery(
@@ -165,8 +174,7 @@ $app->post(
                 "bayi_adres"   => $bayi->bayi_adres,
                 "bayi_adreskodu" => $bayi->bayi_adreskodu,
                 "vergi_numarasi"   => $bayi->vergi_numarasi,
-                "aktif" => $bayi->aktif,
-                "kayit_tarihi"   => $bayi->kayit_tarihi
+                "aktif" => $bayi->aktif
             ]
         );
 
@@ -2528,6 +2536,263 @@ $app->delete(
     "/api/urunyorumlar/{id:[0-9]+}",
     function ($id) use ($app) {
         $phql = "DELETE FROM Models\\Verilerim\\UrunYorumlar WHERE urun_yorumlari_id = :id:";
+
+        $status = $app->modelsManager->executeQuery(
+            $phql,
+            [
+                "id" => $id
+            ]
+        );
+
+        // Yanıt Oluştur
+        $response = new Response();
+
+        if ($status->success() === true) {
+            $response->setJsonContent(
+                [
+                    "status" => "OK"
+                ]
+            );
+        } else {
+            // Http durumunu değiştir
+            $response->setStatusCode(409, "Conflict");
+
+            $errors = [];
+
+            foreach ($status->getMessages() as $message) {
+                $errors[] = $message->getMessage();
+            }
+
+            $response->setJsonContent(
+                [
+                    "status"   => "ERROR",
+                    "messages" => $errors,
+                ]
+            );
+        }
+
+        return $response;
+    }
+);
+
+
+//*******Siparişler*********//
+// Tüm siparislerdni getir
+$app->get(
+    "/api/siparisler",
+    function () use ($app) {
+        $phql = "SELECT * FROM Models\\Verilerim\\Siparisler";
+        $siparislerd = $app->modelsManager->executeQuery($phql);
+
+        $data = [];
+
+        foreach ($siparislerd as $siparis) {
+            $data[] = [
+                "siparis_id"   => $siparis->siparis_id,
+                "user_id" => $siparis->user_id,
+                "urun_id" => $siparis->urun_id,
+                "siparis_tarihi" => $siparis->siparis_tarihi,
+                "onay_tarihi" => $siparis->onay_tarihi,
+                "aktif" => $siparis->aktif
+            ];
+        }
+
+        echo json_encode($data);
+    }
+);
+
+/*// Ürün yorumu arama yap
+// siparislerdnda Arama Yap
+$app->get(
+    "/api/siparisler/search/{name}",
+    function ($name) use ($app) {
+
+        $phql = "SELECT * FROM Models\\Verilerim\\Siparisler WHERE log_detail LIKE :name:";
+
+        $siparislerd = $app->modelsManager->executeQuery(
+            $phql,
+            [
+                "name" => "%" . $name . "%"
+            ]);
+
+        $data = [];
+
+        foreach ($siparislerd as $siparis) {
+            $data[] = [
+                "user_favlist_id"   => $siparis->user_favlist_id,
+                "user_id" => $siparis->user_id,
+                "urun_id" => $siparis->urun_id,
+                "kayit_tarihi" => $siparis->kayit_tarihi
+            ];
+        }
+
+        echo json_encode($data);
+
+    }
+);*/
+
+// Primary Keye bağlı siparisi getir
+$app->get(
+    "/api/siparisler/{id:[0-9]+}",
+    function ($id) use ($app) {
+        $phql = "SELECT * FROM Models\\Verilerim\\Siparisler WHERE siparis_id = :id:";
+
+        $siparis = $app->modelsManager->executeQuery(
+            $phql,
+            [
+                "id" => $id,
+            ]
+        )->getFirst();
+
+
+        $response = new Response();
+
+        if ($siparis === false) {
+            $response->setJsonContent(
+                [
+                    "status" => "NOT-FOUND"
+                ]
+            );
+        } else {
+            $response->setJsonContent(
+                [
+                    "status" => "FOUND",
+                    "data"   => [
+                        "siparis_id"   => $siparis->siparis_id,
+                        "user_id" => $siparis->user_id,
+                        "urun_id" => $siparis->urun_id,
+                        "siparis_tarihi" => $siparis->siparis_tarihi,
+                        "onay_tarihi" => $siparis->onay_tarihi,
+                        "aktif" => $siparis->aktif
+                    ]
+                ]
+            );
+        }
+
+        return $response;
+    }
+);
+
+//TODO onay tarihi kısmı için özel yapı gerekiyor
+// Yeni bir siparislerd ekle
+$app->post(
+    "/api/siparisler",
+    function () use ($app) {
+
+        $siparis = $app->request->getJsonRawBody();
+
+        $phql = "INSERT INTO Models\\Verilerim\\Siparisler 
+        (user_id,urun_id,siparis_tarihi,onay_tarihi,aktif) VALUES 
+        (:user_id:,:urun_id:,:siparis_tarihi:,:onay_tarihi:,:aktif:)";
+
+
+        $status = $app->modelsManager->executeQuery(
+            $phql,
+            [
+                "user_id" => $siparis->user_id,
+                "urun_id" => $siparis->urun_id,
+                "siparis_tarihi" => $siparis->siparis_tarihi,
+                "onay_tarihi" => $siparis->onay_tarihi,
+                "aktif" => $siparis->aktif
+            ]
+        );
+
+        // Yanıt Oluştur
+        $response = new Response();
+
+        // veri oluşturma başarılımı kontrol et
+        if ($status->success() === true) {
+            // Http durumunu değiştir
+            $response->setStatusCode(201, "Created");
+
+            $siparis->siparis_id = $status->getModel()->siparis_id;
+
+            $response->setJsonContent(
+                [
+                    "status" => "OK",
+                    "data"   => $siparis
+                ]
+            );
+        } else {
+            // Http durumunu değiştir
+            $response->setStatusCode(409, "Conflict");
+
+            // Hataları döndürmek için
+            $errors = [];
+
+            foreach ($status->getMessages() as $message) {
+                $errors[] = $message->getMessage();
+            }
+
+            $response->setJsonContent(
+                [
+                    "status"   => "ERROR",
+                    "messages" => $errors,
+                ]
+            );
+        }
+
+        return $response;
+
+    }
+);
+
+// siparis id sine bağlı güncelle
+$app->put(
+    "/api/siparisler/{id:[0-9]+}",
+    function ($id) use ($app) {
+        $siparis = $app->request->getJsonRawBody();
+
+        $db_siparis = Models\Verilerim\Siparisler::findFirst("siparis_id =" . $id);
+
+        $response = new Response();
+
+        if (!$db_siparis) {
+             $response->setJsonContent(
+                [
+                    "status" => "ERROR",
+                    "message" => "Belirlenen id de değer yok"
+                ]
+            );
+            return $response;
+        }
+       
+        //id yi değiştirmesini engelle.
+        if (isset($siparis->siparis_id)) {
+            unset($siparis->siparis_id);
+        }
+
+        foreach ($siparis as $key => $value) {
+            $db_siparis->$key = $value;
+        }
+
+        if ($db_siparis->save() === false) {
+
+        $messages = $db_siparis->getMessages();
+        $response->setStatusCode(409, "Conflict");
+        $response->setJsonContent(
+                [
+                    "status" => "ERROR",
+                    "messages"   => $messages,
+                ]
+            );
+        } else {
+            $response->setJsonContent(
+                [
+                    "status" => "OK"
+                ]
+            );
+        }
+
+        return $response;
+    }
+);
+
+// Primary key e göre sil
+$app->delete(
+    "/api/siparisler/{id:[0-9]+}",
+    function ($id) use ($app) {
+        $phql = "DELETE FROM Models\\Verilerim\\Siparisler WHERE siparis_id = :id:";
 
         $status = $app->modelsManager->executeQuery(
             $phql,
