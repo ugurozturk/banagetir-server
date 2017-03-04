@@ -314,6 +314,9 @@ $app->delete(
 );
 
 //*******KATEGORİLER*********//
+
+//TODO Kategori Altındakileri getir.
+
 // Tüm kategorileri getir
 $app->get(
     "/api/kategoriler",
@@ -375,8 +378,6 @@ $app->get(
                 "id" => $id,
             ]
         )->getFirst();
-
-
 
         // Yanıt Oluştur
         $response = new Response();
@@ -1042,6 +1043,9 @@ $app->delete(
 );
 
 //*******Ürünler*********//
+
+//TODO Ürünlere daha sonra bak. Fiyat filtresi kategori filtresi marka filtresi gibi şeyler
+
 // Tüm ürünleri getir
 $app->get(
     "/api/urunler",
@@ -1545,6 +1549,13 @@ $app->delete(
 );
 
 //*******Users*********//
+
+//TODO kullanıcı grubuna göre kullanıcı getir
+//TODO Ad Soy Email Kullanıcı adı aramasını derinleştir.
+//TODO Taşa göre arama koy
+//TODO Adrese göre arama koy. Bana belli mesefaden yakın olanları getir gibi
+
+
 // Tüm users ları getir
 $app->get(
     "/api/users",
@@ -1827,6 +1838,10 @@ $app->delete(
 );
 
 //*******Logs*********//
+
+//TODO Log kategorisine göre getir.
+//TODO Kayıt tarihine göre getir.
+
 // Tüm logları getir
 $app->get(
     "/api/logs",
@@ -2093,7 +2108,7 @@ $app->get(
     }
 );
 
-// Ürün adını arama yap
+//TODO Ürün adını arama yap
 // userfavlistte Arama Yap
 $app->get(
     "/api/userfavlist/search/{name}",
@@ -2247,7 +2262,7 @@ $app->put(
         if (isset($userfavlist->user_favlist_id)) {
             unset($userfavlist->user_favlist_id);
         }
-//TODO isset ile kontrol et
+
         foreach ($userfavlist as $key => $value) {
             $db_userfavlist->$key = $value;
         }
